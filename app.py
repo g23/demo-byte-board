@@ -2,6 +2,8 @@ from flask import Flask, request, g, render_template, redirect, session
 
 from db import get_db, close_db
 
+from helpers import require_logged_in
+
 import bcrypt
 
 app = Flask(__name__)
@@ -71,7 +73,7 @@ def logout():
 @app.route("/topics")
 def topics():
     c = get_db().cursor()
-    topics = c.execute('SELECT * FROM posts WHERE is_topic = 1')
+    topics = c.execute('SELECT * FROM posts JOIN users ON posts.user_id = users.id WHERE is_topic = 1')
     return render_template("topics/index.html", topics=topics)
 
 # POST /topics/new adds a new topic post
@@ -97,10 +99,74 @@ def new_topic():
     return redirect("/topics")
 
 # GET /topics/<int:id> gets all the posts for a given topic id
+@require_logged_in
+@app.route("/topics/<int:id>")
+def show_topic(id):
+    c = get_db().cursor()
+    # first find the topic
+    topic = c.execute("SELECT * FROM posts AS p JOIN users AS u ON p.user_id=u.id WHERE p.id=?", [id]).fetchone()
+    # then find the posts
+    posts = c.execute("SELECT * FROM posts AS p JOIN users AS u ON p.user_id=u.id WHERE p.topic_id=?", [id])
+    return render_template("topics/view.html", topic=topic, posts=posts)
 
 # POST /topics/<int:id> posts a reply to the given topic
+@require_logged_in
+@app.route("/topics/<int:id>", methods=["POST"])
+def post_reply(id):
+    # get the data
+    title = request.form["title"]
+    content = request.form["content"]
+    is_topic = 0
+    topic_id = id
+    user_id = int(session["user_id"])
+    # put in db
+    c = get_db().cursor()
+    c.execute('''
+        INSERT INTO posts (title, content, is_topic, topic_id, user_id)
+        VALUES (?, ?, ?, ?, ?)
+    ''', [title, content, is_topic, topic_id, user_id])
+    g.db.commit()
+    g.db.close()
+    return redirect("/topics/"+str(id))
 
 # POST /posts/<int:id> updates the post if user_id is right
+@require_logged_in
+@app.route("/posts/<int:id>", methods=["POST"])
+def edit_post(id):
+    # get the post
+    c = get_db().cursor()
+    post = c.execute("SELECT * FROM posts WHERE id=?", [id]).fetchone()
+    # make sure the user_id is right
+    if session["user_id"] != post["user_id"]:
+        return redirect("/")
+    # ok so can make the edits
+    title = request.form["title"]
+    content = "Edited: "+request.form["content"]
+    # add it to the db
+    c.execute('''
+        UPDATE posts
+        SET title=?, content=?
+        WHERE id=?
+    ''', [title, content, post["id"]])
+    g.db.commit()
+    g.db.close()
+    return redirect("/topics/"+str(post["topic_id"]))
+
 
 # DELETE /posts/<int:id> deletes a post if user_id right, not a topic, unless power_level > 9000
-
+@require_logged_in
+@app.route("/posts/<int:id>/delete", methods=["DELETE"])
+def delete_post(id):
+    # make sure the post isn't a topic post and also the user is correct
+    c = get_db().cursor()
+    post = c.execute("SELECT * FROM posts WHERE id=?", [id]).fetchone()
+    if post["is_topic"] == 1:
+        return redirect("/")
+    if session["user_id"] != post["user_id"]:
+        return redirect("/")
+    
+    # ok, can delete it then
+    c.execute("DELETE FROM posts WHERE id=?", [id])
+    g.db.commit()
+    g.db.close()
+    return redirect("/topics/"+str(post["topic_id"]))

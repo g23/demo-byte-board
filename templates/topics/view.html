@@ -1,13 +1,24 @@
-<h1>Viewing Topic {{title}}</h1>
+<h1>{{topic.title}}</h1>
+<p>{{topic.content}}</p>
 
 {% for post in posts %}
     <li>{{post.title}}</li>
     <p>{{post.content}}</p>
+    <p>By: {{post.username}}</p>
+
+    <h5>Edit?</h5>
+    <form method="POST" action="/posts/{{post.id}}">
+        <b>Title:</b> <input name="title" value="{{post.title}}"><br>
+        <b>Content:</b><br>
+        <textarea name="content">{{post.content}}</textarea>
+        <input type="submit" value="Update post">
+    </form>
     <hr>
 {% endfor %}
 
 <h3>Post a reply</h3>
 <form method="POST" action="/topics/{{topic.id}}">
+    <b>Title:</b><input name="title" value="Re: {{topic.title}}"><br>
     <b>Content:</b><br>
     <textarea name="content"></textarea><br>
     <input type="submit" value="Post reply">
