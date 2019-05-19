@@ -1,0 +1,15 @@
+<h1>Listing all the topics</h1>
+
+<ul>
+{% for topic in topics %}
+    <li><a href="/topics/{{topic.id}}">{{topic.title}}</a> at {{topic.created_at}}</li>
+{% endfor %}
+</ul>
+
+<h3>Post a new topic</h3>
+<form method="POST" action="/topics/new">
+    <b>Title:</b> <input name="title"> <br>
+    <b>Content:</b> <br>
+    <textarea name="content"></textarea>
+    <input type="submit">
+</form>

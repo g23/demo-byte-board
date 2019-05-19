@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+<head>
+
+</head>
+<body>
+    {% if username %}
+    <h1>Welcome {{username}}, to the message board!</h1>
+    {% else %}
+    <h1>Welcome to the message board</h1>
+    {% endif %}
+
+    <h3>Users:</h3>
+    <ul>
+    {% for user in users %}
+        <li>{{ user.username }} joined on {{user.joined_on}}</li>
+    {% endfor %}
+    </ul>
+    
+
+    <h3>New User</h3>
+    <form method="POST" action="/users/new">
+        <b>Username:</b> <input name="username"><br>
+        <b>Password:</b> <input name="password" type="password"><br>
+        <b>Email:</b> <input name="email"><br>
+        <input type="submit" value="Create User">
+    </form>
+
+    <h3>Login</h3>
+    <form method="POST" action="/users/login">
+        <b>Username:</b> <input name="username"><br>
+        <b>Password:</b> <input name="password" type="password"><br>
+        <input type="submit" value="Login">
+    </form>
+
+    <h3>Logout</h3>
+    <p><a href="/users/logout">Logout</a></p>
+
+    <h3>Topics</h3>
+    <a href="/topics">Click here to view topics</a> you must be logged in to post.
+</body>
+</html>

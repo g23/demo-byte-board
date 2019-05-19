@@ -1,0 +1,14 @@
+<h1>Viewing Topic {{title}}</h1>
+
+{% for post in posts %}
+    <li>{{post.title}}</li>
+    <p>{{post.content}}</p>
+    <hr>
+{% endfor %}
+
+<h3>Post a reply</h3>
+<form method="POST" action="/topics/{{topic.id}}">
+    <b>Content:</b><br>
+    <textarea name="content"></textarea><br>
+    <input type="submit" value="Post reply">
+</form>
