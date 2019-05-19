@@ -1,42 +1,224 @@
-<!doctype html>
-<html>
-<head>
+{% extends 'base.html' %}
 
-</head>
-<body>
-    {% if username %}
-    <h1>Welcome {{username}}, to the message board!</h1>
+{% block main %}
+
+<div id="topics">
+    <h1>Listing all the topics</h1>
+    <div id="topicArea"></div>
+    {% if session["username"] %}
+    <div>
+        <h3>Post a new Topic</h3>
+        <b>Title:</b><br>
+        <input id="topic-title"><br>
+        <b>Content:</b><br>
+        <textarea id="topic-content"></textarea><br>
+        <button id="add-topic">Add Topic</button>
+    </div>
     {% else %}
-    <h1>Welcome to the message board</h1>
+    <p>Go <a href="/users/login">login</a> to post a topic</p>
     {% endif %}
+</div>
+<div id="posts" style="display:none">
+    <a href="#" data-action="all-topics">Return to Topics</a>
+    <div id="postArea"></div>
+    {% if session["username"] %}
+    <div>
+        <h3>Post a reply</h3>
+        <b>Title:</b><br>
+        <input id="post-title"><br>
+        <b>Content:</b><br>
+        <textarea id="post-content"></textarea><br>
+        <button id="add-post">Post reply</button>
+    </div>
+    {% else %}
+    <p>Go <a href="/users/login">login</a> to post a reply</p>
+    {% endif %}
+</div>
 
-    <h3>Users:</h3>
-    <ul>
-    {% for user in users %}
-        <li>{{ user.username }} joined on {{user.joined_on}}</li>
-    {% endfor %}
-    </ul>
+{% endblock %}
+
+{% block scripts %}
+
+<script id="topicListItem" type="x/template">
+    <div class="topic">
+       <a href="#" data-action="view-topic" data-id="<%= topic.id %>"><%= topic.title %></a>
+       by <%= topic.username %>
+    </div>
+</script>
+
+<script id="postTemp" type="x/template">
+    <div class="post">
+        <span><%= post.username %> wrote:</span>
+        <h5><%= post.title %></h5>
+        <div><%= post.content %></div>
+        <span>at <%= post.created_at %></span><br>
+        <a href="#" class="edit-btn text-warning">Edit?</a>
+        <div style="display:none" method="POST" action="/posts/<%= post.id %>">
+            <b>Title:</b> <input class="title" value="<%= post.title %>"><br>
+            <b>Content:</b><br>
+            <textarea class="content"><%= post.content %></textarea>
+            <button data-action="update-post">Update post</button>
+        </div>
+        <br>
+        <a class="text-danger" href="/posts/<%= post.id %>/delete" data-delete="Are you sure? No undo">Delete this!</a>
+    </div>
+</script>
+
+<script>
+var topics = [];
+var currentTopic;
+var postArea;
+var topicArea;
+var topicListItem;
+
+// creating new html requires us to re-wire the pseudo links so they're functional
+var makeLinks = function() {
+    $("[data-action=view-topic]").click(function() {
+        var id = $(this).data("id");
+        showTopic(id);
+        return false;
+    });
+
+    $("[data-action=all-topics]").click(function() {
+        renderAllTopics();
+        return false;
+    });
+
+    // the edit buttons work by simply displaying form immediately after it
+    $(".edit-btn").click(function() {
+        $(this).next().show();
+        return false;
+    });
+
+    $("[data-action=update-post]").click(function() {
+        var d = {};
+        d.title = $(this).parent().find(".title").val();
+        d.content = $(this).parent().find(".content").val();
+        var url = $(this).parent().attr("action");
+        console.log(d.title, d.content, url);
+        $.ajax({
+            method: "POST",
+            url: url,
+            data: d,
+            success: function() {
+                showTopic(currentTopic);
+            }
+        });
+        return false;
+    });
+
+    $("[data-delete]").click(function() {
+        var msg = $(this).data("delete");
+        if (confirm(msg)) {
+            $.ajax({
+                type: "POST",
+                url: $(this).attr("href"),
+                success: function() {
+                    // now re render the posts
+                    showTopic(currentTopic);
+                }
+            });
+            
+        }
+        return false;
+    });
+};
+
+// ajax loads the posts for a particular topic and then calls renderTopic
+var showTopic = function(id) {
+    // load the json
+    $.ajax({
+        url: "/topics/"+id+".json",
+        success: function(data) {
+            renderTopic(data);
+        }
+    });
+};
+
+// renders all the data about the topic
+var renderTopic = function(data) {
+    var topic = data.topic;
+    currentTopic = topic.id;
+    var posts = data.posts;
+    var res = postTemp({post: topic});
+    // hide the topics area and show the post area
+    $("#topics").hide();
+    $("#posts").show();
+    postArea.html(res + _.map(posts, (p) => postTemp({post: p})).join(""));
+    // also fill out the form a bit
+    $("#post-title").val("Re: "+topic.title);
+    makeLinks();
+};
+
+// shows the list of all the topics
+var renderAllTopics = function() {
+    $("#posts").hide();
+    $("#topics").show();
+    topicArea.html(_.map(topics, function(t) {
+        return topicListItem({topic: t});
+    }).join(""));
+    makeLinks();
+};
+
+// does ajax to get topics then calls renderAllTopics
+var loadTopics = function() {
+    // first load in the topics
+    $.ajax({
+        url: "/topics.json",
+        success: function(res) {
+            topics = res;
+            renderAllTopics();
+        }
+    });
+};
+
+$(function() {
+    // get all the templates / html stuff first
+    topicArea = $("#topicArea");
+    postArea = $("#postArea");
+    topicListItem = _.template($("#topicListItem").html());
+    postTemp = _.template($("#postTemp").html());
     
+    // then ajax load in the topics
+    loadTopics();
 
-    <h3>New User</h3>
-    <form method="POST" action="/users/new">
-        <b>Username:</b> <input name="username"><br>
-        <b>Password:</b> <input name="password" type="password"><br>
-        <b>Email:</b> <input name="email"><br>
-        <input type="submit" value="Create User">
-    </form>
+    // also wire the posting buttons
+    $("#add-topic").click(function() {
+        var d = {};
+        d.title = $("#topic-title").val();
+        d.content = $("#topic-content").val();
+        $.ajax({
+            method: "POST",
+            url: "/topics/new",
+            data: d,
+            success: function() {
+                loadTopics();
+                // also clear the form
+                $("#topic-title").val("");
+                $("#topic-content").val("");
+            }
+        });
+    });
+    // this one a little more complicated b/c have to know which topic we're viewing
+    // so use currentTopic
+    $("#add-post").click(function() {
+        var d = {};
+        d.title = $("#post-title").val();
+        d.content = $("#post-content").val();
+        $.ajax({
+            method: "POST",
+            url: "/topics/"+currentTopic,
+            data: d,
+            success: function() {
+                showTopic(currentTopic);
+                // also clear the form
+                $("#post-title").val("");
+                $("#post-content").val("");
+            }
+        })
+    });
 
-    <h3>Login</h3>
-    <form method="POST" action="/users/login">
-        <b>Username:</b> <input name="username"><br>
-        <b>Password:</b> <input name="password" type="password"><br>
-        <input type="submit" value="Login">
-    </form>
+})
+</script>
 
-    <h3>Logout</h3>
-    <p><a href="/users/logout">Logout</a></p>
-
-    <h3>Topics</h3>
-    <a href="/topics">Click here to view topics</a> you must be logged in to post.
-</body>
-</html>
+{% endblock %}

@@ -1,15 +1,22 @@
+{% extends 'base.html' %}
+
+
+{% block main %}
 <h1>Listing all the topics</h1>
 
-<ul>
 {% for topic in topics %}
-    <li><a href="/topics/{{topic.id}}">{{topic.title}}</a> at {{topic.created_at}}</li>
+<div class="topic">
+    <a href="/topics/{{topic.id}}" data-action="view-topic" data-id="{{topic.id}}">{{ topic.title }}</a>
+    by {{ topic.username }}
+</div>
 {% endfor %}
-</ul>
 
 <h3>Post a new topic</h3>
 <form method="POST" action="/topics/new">
-    <b>Title:</b> <input name="title"> <br>
+    <b>Title:</b><br>
+    <input name="title"> <br>
     <b>Content:</b> <br>
-    <textarea name="content"></textarea>
+    <textarea name="content"></textarea><br>
     <input type="submit">
 </form>
+{% endblock %}

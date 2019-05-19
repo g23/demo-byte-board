@@ -1,0 +1,81 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Welcome to the Demo Byte Board</title>
+    <!-- Bootstrap core CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            padding-top: 5rem;
+        }
+
+        .topic {
+            margin: 10px;
+        }
+
+        .post {
+            background-color: gray;
+            border: 1px solid #000;
+            margin: 10px;
+            padding: 10px;
+        }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+  <a class="navbar-brand" href="/">Demo Byte Board</a>
+  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarsExampleDefault" aria-controls="navbarsExampleDefault" aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
+  <div class="collapse navbar-collapse" id="navbarsExampleDefault">
+    <ul class="navbar-nav mr-auto">
+    {% if nav == "home" %}
+        <li class="nav-item active">
+            <a class="nav-link" href="/">Home <span class="sr-only">(current)</span></a>
+        </li>
+    {% else %}
+        <li class="nav-item">
+            <a class="nav-link" href="/">Home</a>
+        </li>
+    {% endif %}
+    {% if nav == "topics" %}
+        <li class="nav-item active">
+            <a class="nav-link" href="/topics">Topics <span class="sr-only">(current)</span></a>
+        </li>
+    {% else %}
+        <li class="nav-item">
+            <a class="nav-link" href="/topics">Topics</a>
+        </li>
+    {% endif %}
+    {% if nav == "login" %}
+        <li class="nav-item active">
+            <a class="nav-link" href="/users/login">Login <span class="sr-only">(current)</span></a>
+        </li>
+    {% else %}
+        <li class="nav-item">
+            {% if session["username"] %}
+            <a class="nav-link" href="/users/logout">Logout ({{session["username"]}})</a>
+            {% else %}
+            <a class="nav-link" href="/users/login">Login</a>
+            {% endif %}
+        </li>
+    {% endif %}
+    </ul>
+  </div>
+</nav>
+
+<main role="main" class="container">
+
+  {% block main %}{% endblock %}
+
+</main><!-- /.container -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.9.1/underscore-min.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

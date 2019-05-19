@@ -1,25 +1,65 @@
+{% extends 'base.html' %}
+
+{% block main %}
+
+
 <h1>{{topic.title}}</h1>
 <p>{{topic.content}}</p>
 
 {% for post in posts %}
-    <li>{{post.title}}</li>
-    <p>{{post.content}}</p>
-    <p>By: {{post.username}}</p>
-
-    <h5>Edit?</h5>
-    <form method="POST" action="/posts/{{post.id}}">
+<div class="post">
+    <span>{{ post.username }} wrote:</span>
+    <h5>{{ post.title }}</h5>
+    <div>{{ post.content }}</div>
+    <span>at {{ post.created_at }}</span><br>
+    <a href="#" class="edit-btn text-warning">Edit?</a>
+    <form style="display:none" method="POST" action="/posts/{{post.id}}">
         <b>Title:</b> <input name="title" value="{{post.title}}"><br>
         <b>Content:</b><br>
         <textarea name="content">{{post.content}}</textarea>
         <input type="submit" value="Update post">
     </form>
-    <hr>
+    <br>
+    <a class="text-danger" href="/posts/{{post.id}}/delete" data-delete="Are you sure? No undo">Delete this!</a>
+</div>   
 {% endfor %}
 
 <h3>Post a reply</h3>
 <form method="POST" action="/topics/{{topic.id}}">
-    <b>Title:</b><input name="title" value="Re: {{topic.title}}"><br>
+    <b>Title:</b><br>
+    <input name="title" value="Re: {{topic.title}}"><br>
     <b>Content:</b><br>
     <textarea name="content"></textarea><br>
     <input type="submit" value="Post reply">
 </form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(function() {
+    // the edit buttons work by simply displaying form immediately after it
+    $(".edit-btn").click(function() {
+        $(this).next().show();
+        return false;
+    });
+
+    $("[data-delete]").click(function() {
+        var msg = $(this).data("delete");
+        console.log("About to POST to "+$(this).attr("href"));
+        if (confirm(msg)) {
+            $.ajax({
+                type: "POST",
+                url: $(this).attr("href"),
+                success: function() {
+                    location.reload();
+                }
+            });
+            
+        }
+        return false;
+    })
+});
+
+</script>
+
+{% endblock %}

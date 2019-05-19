@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block main %}
+
+<h1>Login</h1>
+<form method="POST" action="/users/login">
+    <b>Username:</b> <input name="username"><br>
+    <b>Password:</b> <input type="password" name="password"><br>
+    <input type="submit" value="Login">
+</form>
+
+<h1>Or make an account</h1>
+<form method="POST" action="/users/new">
+    <b>Username:</b> <input name="username"><br>
+    <b>Email:</b> <input name="email"><br>
+    <b>Password:</b> <input name="password" type="password"><br>
+    <input type="submit" value="Create Account">
+</form>
+{% endblock %}

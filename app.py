@@ -1,4 +1,4 @@
-from flask import Flask, request, g, render_template, redirect, session
+from flask import Flask, jsonify, request, g, render_template, redirect, session
 
 from db import get_db, close_db
 
@@ -11,12 +11,12 @@ app = Flask(__name__)
 app.secret_key = b'\x7f\x8e\xe1L\x17W\xf0\xef\xc6L_-\xd0\x98In' # gen'd via os.urandom(16)
 
 @app.route("/")
-def hello():
+def index():
     username = session.get("username")
     c = get_db().cursor()
     users = c.execute("SELECT * FROM users")
     #g.db.close()
-    return render_template("index.html",username=username, users=users)
+    return render_template("index.html", nav="home", username=username, users=users, user_id=session.get("user_id"))
 
 # GET /users list all users if power_level > 9000 else redirect to /
 
@@ -41,10 +41,12 @@ def new_user():
     g.db.close()
     return redirect("/")
 
-
+# GET  /users/login gives the form for logging in or creating an account
 # POST /users/login logs a user in adds them to session
-@app.route("/users/login", methods=["POST"])
+@app.route("/users/login", methods=["GET", "POST"])
 def login():
+    if request.method == "GET":
+        return render_template("login.html", nav="login")
     username = request.form["username"]
     password = bytes(request.form["password"], "utf")
     # bcrypt the password and verify it's correct
@@ -73,8 +75,25 @@ def logout():
 @app.route("/topics")
 def topics():
     c = get_db().cursor()
-    topics = c.execute('SELECT * FROM posts JOIN users ON posts.user_id = users.id WHERE is_topic = 1')
-    return render_template("topics/index.html", topics=topics)
+    topics = c.execute('''
+        SELECT posts.id, title, content, username, created_at
+        FROM posts
+        JOIN users ON posts.user_id = users.id
+        WHERE is_topic = 1
+    ''').fetchall()
+    return render_template("topics/index.html", nav="topics", topics=topics)
+
+# GET /topics lists all the topic posts
+@app.route("/topics.json")
+def topics_json():
+    c = get_db().cursor()
+    topics = c.execute('''
+        SELECT posts.id, title, content, username, created_at
+        FROM posts
+        JOIN users ON posts.user_id = users.id
+        WHERE is_topic = 1
+    ''').fetchall()
+    return jsonify(topics)
 
 # POST /topics/new adds a new topic post
 @app.route("/topics/new", methods=["POST"])
@@ -99,19 +118,47 @@ def new_topic():
     return redirect("/topics")
 
 # GET /topics/<int:id> gets all the posts for a given topic id
-@require_logged_in
 @app.route("/topics/<int:id>")
 def show_topic(id):
     c = get_db().cursor()
     # first find the topic
-    topic = c.execute("SELECT * FROM posts AS p JOIN users AS u ON p.user_id=u.id WHERE p.id=?", [id]).fetchone()
+    topic = c.execute('''
+        SELECT p.id, title, content, username, created_at
+        FROM posts AS p
+        JOIN users AS u ON p.user_id=u.id
+        WHERE p.id=?
+    ''', [id]).fetchone()
     # then find the posts
-    posts = c.execute("SELECT * FROM posts AS p JOIN users AS u ON p.user_id=u.id WHERE p.topic_id=?", [id])
-    return render_template("topics/view.html", topic=topic, posts=posts)
+    posts = c.execute('''
+        SELECT p.id, title, content, username, created_at
+        FROM posts AS p
+        JOIN users AS u ON p.user_id=u.id
+        WHERE p.topic_id=?''', [id]).fetchall()
+    return render_template("topics/view.html", nav="topics", topic=topic, posts=posts)
+
+# GET /topics/<int:id>.json gets all the posts in json
+
+@app.route("/topics/<int:id>.json")
+def show_topic_json(id):
+    c = get_db().cursor()
+    # first find the topic
+    topic = c.execute('''
+        SELECT p.id, title, content, username, created_at
+        FROM posts AS p
+        JOIN users AS u ON p.user_id=u.id
+        WHERE p.id=?
+    ''', [id]).fetchone()
+    # then find the posts
+    posts = c.execute('''
+        SELECT p.id, title, content, username, created_at
+        FROM posts AS p
+        JOIN users AS u ON p.user_id=u.id
+        WHERE p.topic_id=?''', [id]).fetchall()
+    return jsonify(topic=topic, posts=posts)
 
 # POST /topics/<int:id> posts a reply to the given topic
-@require_logged_in
 @app.route("/topics/<int:id>", methods=["POST"])
+@require_logged_in
 def post_reply(id):
     # get the data
     title = request.form["title"]
@@ -130,8 +177,8 @@ def post_reply(id):
     return redirect("/topics/"+str(id))
 
 # POST /posts/<int:id> updates the post if user_id is right
-@require_logged_in
 @app.route("/posts/<int:id>", methods=["POST"])
+@require_logged_in
 def edit_post(id):
     # get the post
     c = get_db().cursor()
@@ -154,8 +201,8 @@ def edit_post(id):
 
 
 # DELETE /posts/<int:id> deletes a post if user_id right, not a topic, unless power_level > 9000
+@app.route("/posts/<int:id>/delete", methods=["POST"])
 @require_logged_in
-@app.route("/posts/<int:id>/delete", methods=["DELETE"])
 def delete_post(id):
     # make sure the post isn't a topic post and also the user is correct
     c = get_db().cursor()
